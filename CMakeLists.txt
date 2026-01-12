@@ -26,7 +26,8 @@ set(SRCS
         src/IconCanva.cpp
         src/IconCanva.h
         src/IconPreview.cpp
-        src/IconPreview.h)
+        src/IconPreview.h
+        src/Resources.h)
 
 # Add the manifest resource only for MinGW builds to avoid duplicate manifests with MSVC.
 if (MINGW)

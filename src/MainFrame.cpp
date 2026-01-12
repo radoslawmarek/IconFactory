@@ -1,4 +1,6 @@
 #include "MainFrame.h"
+#include "Resources.h"
+#include <wx/mstream.h>
 
 MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Icon Factory")
 {
@@ -7,6 +9,38 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Icon Factory")
     m_iconPreview = new IconPreview(m_panel, wxID_ANY, wxDefaultPosition, wxDefaultSize);
     rb_iconSize = new wxRadioBox(m_panel, wxID_ANY, "Icon Size", wxDefaultPosition, wxDefaultSize, {"Small (16x16)", "Medium (32x32)", "Large (64x64)"}, 1, wxRA_SPECIFY_COLS);
     m_scaleSlider = new wxSlider(m_panel, wxID_ANY, 2, 1, 4, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL | wxSL_LABELS);
+
+    // Load embedded PNG icons
+    wxMemoryInputStream streamHR(fold_horizontal_png, fold_horizontal_png_size);
+    wxMemoryInputStream streamVR(fold_vertical_png, fold_vertical_png_size);
+    wxMemoryInputStream streamHL(minus_horizontal_png, minus_horizontal_png_size);
+    wxMemoryInputStream streamVL(minus_vertical_png, minus_vertical_png_size);
+
+    wxImage imgHR(streamHR, wxBITMAP_TYPE_PNG);
+    wxImage imgVR(streamVR, wxBITMAP_TYPE_PNG);
+    wxImage imgHL(streamHL, wxBITMAP_TYPE_PNG);
+    wxImage imgVL(streamVL, wxBITMAP_TYPE_PNG);
+
+    wxBitmap bmpHR(imgHR);
+    wxBitmap bmpVR(imgVR);
+    wxBitmap bmpHL(imgHL);
+    wxBitmap bmpVL(imgVL);
+
+    m_btnHorizontalRuler = new wxButton(m_panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    m_btnVerticalRuler = new wxButton(m_panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    m_btnHorizontalLine = new wxButton(m_panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    m_btnVerticalLine = new wxButton(m_panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+
+    m_btnHorizontalRuler->SetBitmap(bmpHR);
+    m_btnVerticalRuler->SetBitmap(bmpVR);
+    m_btnHorizontalLine->SetBitmap(bmpHL);
+    m_btnVerticalLine->SetBitmap(bmpVL);
+
+    // Set tooltips
+    m_btnHorizontalRuler->SetToolTip("Add Horizontal Ruler (H)");
+    m_btnVerticalRuler->SetToolTip("Add Vertical Ruler (V)");
+    m_btnHorizontalLine->SetToolTip("Draw Horizontal Line");
+    m_btnVerticalLine->SetToolTip("Draw Vertical Line");
 
     // Set the default selection to Medium (32x32)
     rb_iconSize->SetSelection(1);
@@ -19,6 +53,10 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Icon Factory")
     m_panel->Bind(EVT_CELL_HOVERED, &MainFrame::OnCellHovered, this);
     m_panel->Bind(EVT_ICON_CHANGED, &MainFrame::OnIconChanged, this);
     m_scaleSlider->Bind(wxEVT_SLIDER, &MainFrame::OnScaleChanged, this);
+    m_btnHorizontalRuler->Bind(wxEVT_BUTTON, &MainFrame::OnHorizontalRulerClick, this);
+    m_btnVerticalRuler->Bind(wxEVT_BUTTON, &MainFrame::OnVerticalRulerClick, this);
+    m_btnHorizontalLine->Bind(wxEVT_BUTTON, &MainFrame::OnHorizontalLineClick, this);
+    m_btnVerticalLine->Bind(wxEVT_BUTTON, &MainFrame::OnVerticalLineClick, this);
 
     SetLayout();
 
@@ -39,8 +77,22 @@ void MainFrame::SetLayout()
     auto* main_sizer = new wxBoxSizer(wxHORIZONTAL);
     auto* toolbox_sizer = new wxBoxSizer(wxVERTICAL);
 
+    // Icon size selection
     toolbox_sizer->Add(rb_iconSize, 0, wxEXPAND);
+
+    // Toolbar with ruler and line buttons
+    auto* toolbar_sizer = new wxBoxSizer(wxHORIZONTAL);
+    toolbar_sizer->Add(m_btnHorizontalRuler, 0, wxALL, this->FromDIP(2));
+    toolbar_sizer->Add(m_btnVerticalRuler, 0, wxALL, this->FromDIP(2));
+    toolbar_sizer->AddSpacer(this->FromDIP(8));
+    toolbar_sizer->Add(m_btnHorizontalLine, 0, wxALL, this->FromDIP(2));
+    toolbar_sizer->Add(m_btnVerticalLine, 0, wxALL, this->FromDIP(2));
+    toolbox_sizer->Add(toolbar_sizer, 0, wxEXPAND | wxTOP, this->FromDIP(8));
+
+    // Stretch spacer to push preview to bottom
     toolbox_sizer->AddStretchSpacer(1);
+
+    // Preview and scale slider at bottom
     toolbox_sizer->Add(m_iconPreview, 0, wxALIGN_CENTER | wxTOP, this->FromDIP(12));
     toolbox_sizer->Add(m_scaleSlider, 0, wxEXPAND | wxTOP, this->FromDIP(12));
 
@@ -91,4 +143,34 @@ void MainFrame::OnScaleChanged(wxCommandEvent& event)
 {
     int scale = m_scaleSlider->GetValue();
     m_iconPreview->SetScale(scale);
+}
+
+void MainFrame::OnHorizontalRulerClick(wxCommandEvent& event)
+{
+    // Simulate pressing 'H' key on the IconCanva
+    wxKeyEvent keyEvent(wxEVT_KEY_UP);
+    keyEvent.m_keyCode = 'H';
+    m_iconCanva->GetEventHandler()->ProcessEvent(keyEvent);
+    m_iconCanva->SetFocus();
+}
+
+void MainFrame::OnVerticalRulerClick(wxCommandEvent& event)
+{
+    // Simulate pressing 'V' key on the IconCanva
+    wxKeyEvent keyEvent(wxEVT_KEY_UP);
+    keyEvent.m_keyCode = 'V';
+    m_iconCanva->GetEventHandler()->ProcessEvent(keyEvent);
+    m_iconCanva->SetFocus();
+}
+
+void MainFrame::OnHorizontalLineClick(wxCommandEvent& event)
+{
+    m_iconCanva->SetLineDrawingMode(true, true); // horizontal mode
+    m_iconCanva->SetFocus();
+}
+
+void MainFrame::OnVerticalLineClick(wxCommandEvent& event)
+{
+    m_iconCanva->SetLineDrawingMode(true, false); // vertical mode
+    m_iconCanva->SetFocus();
 }

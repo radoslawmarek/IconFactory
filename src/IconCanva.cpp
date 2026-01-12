@@ -45,6 +45,7 @@ void IconCanva::OnPaint(wxPaintEvent& event)
         DrawRulers(gc);
         DrawPreviewRuler(gc);
         DrawIconPixels(gc);
+        DrawPreviewLine(gc);
         DrawGrid(gc);
         delete gc;
     }
@@ -145,6 +146,14 @@ void IconCanva::OnMouseMove(wxMouseEvent& event)
         const int col = static_cast<int>((mousePos.x - m_gridX) / m_cellSize);
         const int row = static_cast<int>((mousePos.y - m_gridY) / m_cellSize);
 
+        // Update current position for line drawing preview
+        if (m_lineDrawingMode && m_lineStartSet)
+        {
+            m_currentCol = col;
+            m_currentRow = row;
+            Refresh();
+        }
+
         // Send event to parent with cell position
         wxCommandEvent evt(EVT_CELL_HOVERED, GetId());
         evt.SetString(wxString::Format("(%d, %d)", col, row));
@@ -192,12 +201,58 @@ void IconCanva::OnLeftDown(wxMouseEvent& event)
         return;
     }
 
-    // Check if clicking on a grid cell to toggle pixel
+    // Check if clicking on a grid cell
     if (mousePos.x >= m_gridX && mousePos.x < m_gridX + m_gridPixelSize &&
         mousePos.y >= m_gridY && mousePos.y < m_gridY + m_gridPixelSize)
     {
         int col = static_cast<int>((mousePos.x - m_gridX) / m_cellSize);
         int row = static_cast<int>((mousePos.y - m_gridY) / m_cellSize);
+
+        // Handle line drawing mode
+        if (m_lineDrawingMode)
+        {
+            if (!m_lineStartSet)
+            {
+                // First click - set start point
+                m_lineStartCol = col;
+                m_lineStartRow = row;
+                m_currentCol = col;
+                m_currentRow = row;
+                m_lineStartSet = true;
+                Refresh();
+            }
+            else
+            {
+                // Second click - draw the line
+                if (m_isHorizontalLine)
+                {
+                    // Draw horizontal line
+                    int startCol = std::min(m_lineStartCol, col);
+                    int endCol = std::max(m_lineStartCol, col);
+                    for (int c = startCol; c <= endCol; c++)
+                    {
+                        m_iconPixels[m_lineStartRow][c] = true;
+                    }
+                }
+                else
+                {
+                    // Draw vertical line
+                    int startRow = std::min(m_lineStartRow, row);
+                    int endRow = std::max(m_lineStartRow, row);
+                    for (int r = startRow; r <= endRow; r++)
+                    {
+                        m_iconPixels[r][m_lineStartCol] = true;
+                    }
+                }
+
+                // Exit line drawing mode
+                m_lineDrawingMode = false;
+                m_lineStartSet = false;
+                NotifyIconChanged();
+                Refresh();
+            }
+            return;
+        }
 
         // Check if clicking on ruler
         int rulerIndex = GetRulerAtPosition(mousePos);
@@ -452,4 +507,49 @@ void IconCanva::NotifyIconChanged()
 {
     wxCommandEvent evt(EVT_ICON_CHANGED, GetId());
     wxPostEvent(GetParent(), evt);
+}
+
+void IconCanva::SetLineDrawingMode(bool enabled, bool isHorizontal)
+{
+    m_lineDrawingMode = enabled;
+    m_isHorizontalLine = isHorizontal;
+    m_lineStartSet = false;
+    m_lineStartCol = 0;
+    m_lineStartRow = 0;
+    m_currentCol = 0;
+    m_currentRow = 0;
+}
+
+void IconCanva::DrawPreviewLine(wxGraphicsContext* gc)
+{
+    if (!m_lineDrawingMode || !m_lineStartSet) return;
+
+    wxColour previewColor(128, 128, 128, 128); // Semi-transparent gray
+    gc->SetBrush(wxBrush(previewColor));
+    gc->SetPen(*wxTRANSPARENT_PEN);
+
+    if (m_isHorizontalLine)
+    {
+        // Draw horizontal line preview
+        int startCol = std::min(m_lineStartCol, m_currentCol);
+        int endCol = std::max(m_lineStartCol, m_currentCol);
+        for (int c = startCol; c <= endCol; c++)
+        {
+            double x = m_gridX + c * m_cellSize;
+            double y = m_gridY + m_lineStartRow * m_cellSize;
+            gc->DrawRectangle(x, y, m_cellSize, m_cellSize);
+        }
+    }
+    else
+    {
+        // Draw vertical line preview
+        int startRow = std::min(m_lineStartRow, m_currentRow);
+        int endRow = std::max(m_lineStartRow, m_currentRow);
+        for (int r = startRow; r <= endRow; r++)
+        {
+            double x = m_gridX + m_lineStartCol * m_cellSize;
+            double y = m_gridY + r * m_cellSize;
+            gc->DrawRectangle(x, y, m_cellSize, m_cellSize);
+        }
+    }
 }
