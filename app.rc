@@ -1,0 +1,2 @@
+// Embed the application manifest to enable Common Controls v6 (modern controls).
+1 24 "app.manifest"
