@@ -1,6 +1,7 @@
 #include "MainFrame.h"
 #include "Resources.h"
 #include <wx/mstream.h>
+#include <wx/file.h>
 
 MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Icon Factory")
 {
@@ -15,32 +16,50 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Icon Factory")
     wxMemoryInputStream streamVR(fold_vertical_png, fold_vertical_png_size);
     wxMemoryInputStream streamHL(minus_horizontal_png, minus_horizontal_png_size);
     wxMemoryInputStream streamVL(minus_vertical_png, minus_vertical_png_size);
+    wxMemoryInputStream streamRect(rectangle_png, rectangle_png_size);
+    wxMemoryInputStream streamOpen(open_png, open_png_size);
+    wxMemoryInputStream streamSave(save_png, save_png_size);
 
     wxImage imgHR(streamHR, wxBITMAP_TYPE_PNG);
     wxImage imgVR(streamVR, wxBITMAP_TYPE_PNG);
     wxImage imgHL(streamHL, wxBITMAP_TYPE_PNG);
     wxImage imgVL(streamVL, wxBITMAP_TYPE_PNG);
+    wxImage imgRect(streamRect, wxBITMAP_TYPE_PNG);
+    wxImage imgOpen(streamOpen, wxBITMAP_TYPE_PNG);
+    wxImage imgSave(streamSave, wxBITMAP_TYPE_PNG);
 
     wxBitmap bmpHR(imgHR);
     wxBitmap bmpVR(imgVR);
     wxBitmap bmpHL(imgHL);
     wxBitmap bmpVL(imgVL);
+    wxBitmap bmpRect(imgRect);
+    wxBitmap bmpOpen(imgOpen);
+    wxBitmap bmpSave(imgSave);
 
     m_btnHorizontalRuler = new wxButton(m_panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
     m_btnVerticalRuler = new wxButton(m_panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
     m_btnHorizontalLine = new wxButton(m_panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
     m_btnVerticalLine = new wxButton(m_panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    m_btnRectangle = new wxButton(m_panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    m_btnOpen = new wxButton(m_panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    m_btnSave = new wxButton(m_panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
 
     m_btnHorizontalRuler->SetBitmap(bmpHR);
     m_btnVerticalRuler->SetBitmap(bmpVR);
     m_btnHorizontalLine->SetBitmap(bmpHL);
     m_btnVerticalLine->SetBitmap(bmpVL);
+    m_btnRectangle->SetBitmap(bmpRect);
+    m_btnOpen->SetBitmap(bmpOpen);
+    m_btnSave->SetBitmap(bmpSave);
 
     // Set tooltips
     m_btnHorizontalRuler->SetToolTip("Add Horizontal Ruler (H)");
     m_btnVerticalRuler->SetToolTip("Add Vertical Ruler (V)");
     m_btnHorizontalLine->SetToolTip("Draw Horizontal Line");
     m_btnVerticalLine->SetToolTip("Draw Vertical Line");
+    m_btnRectangle->SetToolTip("Draw Rectangle");
+    m_btnOpen->SetToolTip("Open");
+    m_btnSave->SetToolTip("Save");
 
     // Set the default selection to Medium (32x32)
     rb_iconSize->SetSelection(1);
@@ -57,6 +76,9 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Icon Factory")
     m_btnVerticalRuler->Bind(wxEVT_BUTTON, &MainFrame::OnVerticalRulerClick, this);
     m_btnHorizontalLine->Bind(wxEVT_BUTTON, &MainFrame::OnHorizontalLineClick, this);
     m_btnVerticalLine->Bind(wxEVT_BUTTON, &MainFrame::OnVerticalLineClick, this);
+    m_btnRectangle->Bind(wxEVT_BUTTON, &MainFrame::OnRectangleClick, this);
+    m_btnOpen->Bind(wxEVT_BUTTON, &MainFrame::OnOpenClick, this);
+    m_btnSave->Bind(wxEVT_BUTTON, &MainFrame::OnSaveClick, this);
 
     SetLayout();
 
@@ -80,13 +102,21 @@ void MainFrame::SetLayout()
     // Icon size selection
     toolbox_sizer->Add(rb_iconSize, 0, wxEXPAND);
 
-    // Toolbar with ruler and line buttons
+    // File operations toolbar
+    auto* file_toolbar_sizer = new wxBoxSizer(wxHORIZONTAL);
+    file_toolbar_sizer->Add(m_btnOpen, 0, wxALL, this->FromDIP(2));
+    file_toolbar_sizer->Add(m_btnSave, 0, wxALL, this->FromDIP(2));
+    toolbox_sizer->Add(file_toolbar_sizer, 0, wxEXPAND | wxTOP, this->FromDIP(8));
+
+    // Drawing tools toolbar
     auto* toolbar_sizer = new wxBoxSizer(wxHORIZONTAL);
     toolbar_sizer->Add(m_btnHorizontalRuler, 0, wxALL, this->FromDIP(2));
     toolbar_sizer->Add(m_btnVerticalRuler, 0, wxALL, this->FromDIP(2));
     toolbar_sizer->AddSpacer(this->FromDIP(8));
     toolbar_sizer->Add(m_btnHorizontalLine, 0, wxALL, this->FromDIP(2));
     toolbar_sizer->Add(m_btnVerticalLine, 0, wxALL, this->FromDIP(2));
+    toolbar_sizer->AddSpacer(this->FromDIP(8));
+    toolbar_sizer->Add(m_btnRectangle, 0, wxALL, this->FromDIP(2));
     toolbox_sizer->Add(toolbar_sizer, 0, wxEXPAND | wxTOP, this->FromDIP(8));
 
     // Stretch spacer to push preview to bottom
@@ -173,4 +203,227 @@ void MainFrame::OnVerticalLineClick(wxCommandEvent& event)
 {
     m_iconCanva->SetLineDrawingMode(true, false); // vertical mode
     m_iconCanva->SetFocus();
+}
+
+void MainFrame::OnRectangleClick(wxCommandEvent& event)
+{
+    m_iconCanva->SetRectangleDrawingMode(true);
+    m_iconCanva->SetFocus();
+}
+
+void MainFrame::OnOpenClick(wxCommandEvent& event)
+{
+    wxFileDialog openFileDialog(this, "Open Icon", "", "",
+                                "C++ Header files (*.h)|*.h|C++ Source files (*.cpp)|*.cpp",
+                                wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+
+    if (openFileDialog.ShowModal() == wxID_CANCEL)
+        return;
+
+    wxString path = openFileDialog.GetPath();
+
+    // Read file content
+    wxFile file(path, wxFile::read);
+    if (!file.IsOpened())
+    {
+        wxMessageBox("Failed to open file", "Error", wxOK | wxICON_ERROR);
+        return;
+    }
+
+    wxString content;
+    file.ReadAll(&content);
+    file.Close();
+
+    // Parse the file to extract icon data
+    // Look for array declaration pattern: "static const unsigned char xxx_data[] = {"
+    int arrayStart = content.Find("_data[] = {");
+    if (arrayStart == wxNOT_FOUND)
+    {
+        wxMessageBox("Invalid file format: Could not find icon data array", "Error", wxOK | wxICON_ERROR);
+        return;
+    }
+
+    // Extract icon size from comment "// Icon size: WxH"
+    int sizeCommentPos = content.Find("// Icon size: ");
+    if (sizeCommentPos == wxNOT_FOUND)
+    {
+        wxMessageBox("Invalid file format: Could not find icon size", "Error", wxOK | wxICON_ERROR);
+        return;
+    }
+
+    // Parse size
+    wxString sizeStr = content.Mid(sizeCommentPos + 14); // Skip "// Icon size: "
+    sizeStr = sizeStr.BeforeFirst('\n');
+    long width, height;
+    if (!sizeStr.BeforeFirst('x').ToLong(&width) || !sizeStr.AfterFirst('x').ToLong(&height))
+    {
+        wxMessageBox("Invalid file format: Could not parse icon size", "Error", wxOK | wxICON_ERROR);
+        return;
+    }
+
+    if (width != height || (width != 16 && width != 32 && width != 64))
+    {
+        wxMessageBox("Unsupported icon size. Only 16x16, 32x32, and 64x64 are supported.", "Error", wxOK | wxICON_ERROR);
+        return;
+    }
+
+    int iconSize = width;
+
+    // Extract array content between { and }
+    int braceStart = content.Find('{', arrayStart);
+    int braceEnd = content.Find('}', braceStart);
+    if (braceStart == wxNOT_FOUND || braceEnd == wxNOT_FOUND)
+    {
+        wxMessageBox("Invalid file format: Could not find array data", "Error", wxOK | wxICON_ERROR);
+        return;
+    }
+
+    wxString arrayData = content.Mid(braceStart + 1, braceEnd - braceStart - 1);
+
+    // Parse hex values
+    wxArrayString hexValues;
+    wxString current;
+    for (size_t i = 0; i < arrayData.length(); i++)
+    {
+        wxChar ch = arrayData[i];
+        if (ch == '0' && i + 1 < arrayData.length() && (arrayData[i + 1] == 'x' || arrayData[i + 1] == 'X'))
+        {
+            current = "0x";
+            i++; // Skip 'x'
+        }
+        else if ((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F'))
+        {
+            current += ch;
+        }
+        else if (!current.IsEmpty())
+        {
+            hexValues.Add(current);
+            current.clear();
+        }
+    }
+    if (!current.IsEmpty())
+        hexValues.Add(current);
+
+    // Calculate expected bytes
+    int bytesPerRow = (iconSize + 7) / 8;
+    int expectedBytes = iconSize * bytesPerRow;
+
+    if (hexValues.Count() != expectedBytes)
+    {
+        wxMessageBox(wxString::Format("Invalid data: Expected %d bytes, found %d", expectedBytes, hexValues.Count()),
+                     "Error", wxOK | wxICON_ERROR);
+        return;
+    }
+
+    // Set icon size
+    m_iconCanva->SetIconSize(iconSize);
+
+    // Update radio box selection
+    int selection = (iconSize == 16) ? 0 : (iconSize == 32) ? 1 : 2;
+    rb_iconSize->SetSelection(selection);
+
+    // Unpack bits and set pixels
+    std::vector<std::vector<bool>> pixels(iconSize, std::vector<bool>(iconSize, false));
+    int byteIdx = 0;
+
+    for (int row = 0; row < iconSize; row++)
+    {
+        for (int byteInRow = 0; byteInRow < bytesPerRow; byteInRow++)
+        {
+            unsigned long byteValue;
+            if (!hexValues[byteIdx].ToULong(&byteValue, 16))
+            {
+                wxMessageBox("Invalid hex value in data", "Error", wxOK | wxICON_ERROR);
+                return;
+            }
+
+            for (int bit = 0; bit < 8; bit++)
+            {
+                int col = byteInRow * 8 + bit;
+                if (col < iconSize)
+                {
+                    pixels[row][col] = (byteValue & (1 << (7 - bit))) != 0;
+                }
+            }
+
+            byteIdx++;
+        }
+    }
+
+    // Apply pixels to canvas
+    m_iconCanva->SetIconPixels(pixels);
+    m_iconPreview->SetIconData(iconSize, m_iconCanva->GetIconPixels());
+
+    wxMessageBox("Icon loaded successfully", "Success", wxOK | wxICON_INFORMATION);
+}
+
+void MainFrame::OnSaveClick(wxCommandEvent& event)
+{
+    wxFileDialog saveFileDialog(this, "Save Icon", "", "",
+                                "C++ Header files (*.h)|*.h|C++ Source files (*.cpp)|*.cpp",
+                                wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+
+    if (saveFileDialog.ShowModal() == wxID_CANCEL)
+        return;
+
+    wxString path = saveFileDialog.GetPath();
+    wxString filename = saveFileDialog.GetFilename();
+
+    // Extract variable name from filename (remove extension)
+    wxString varName = filename.BeforeLast('.');
+    // Replace invalid characters with underscores
+    varName.Replace("-", "_");
+    varName.Replace(" ", "_");
+    varName.Replace(".", "_");
+
+    // Get icon data
+    int iconSize = m_iconCanva->GetIconSize();
+    const auto& iconPixels = m_iconCanva->GetIconPixels();
+
+    // Build C/C++ compatible array content with bit packing
+    // Pack 8 pixels per byte for memory efficiency
+    int bytesPerRow = (iconSize + 7) / 8; // Round up to nearest byte
+    int totalBytes = iconSize * bytesPerRow;
+
+    wxString content = "// Generated icon data\n";
+    content += "// Icon size: " + wxString::Format("%dx%d", iconSize, iconSize) + "\n";
+    content += "// Data format: Each byte contains 8 pixels (1 bit per pixel, MSB first)\n";
+    content += "// Total bytes: " + wxString::Format("%d", totalBytes) + "\n\n";
+    content += "static const unsigned char " + varName + "_data[] = {\n";
+
+    for (int row = 0; row < iconSize; row++)
+    {
+        content += "    ";
+        for (int byteIdx = 0; byteIdx < bytesPerRow; byteIdx++)
+        {
+            unsigned char byte = 0;
+            for (int bit = 0; bit < 8; bit++)
+            {
+                int col = byteIdx * 8 + bit;
+                if (col < iconSize && iconPixels[row][col])
+                {
+                    byte |= (1 << (7 - bit)); // MSB first
+                }
+            }
+            content += wxString::Format("0x%02x", byte);
+
+            if (row < iconSize - 1 || byteIdx < bytesPerRow - 1)
+                content += ", ";
+        }
+        content += "\n";
+    }
+    content += "};\n";
+
+    // Write to file
+    wxFile file(path, wxFile::write);
+    if (!file.IsOpened())
+    {
+        wxMessageBox("Failed to save file", "Error", wxOK | wxICON_ERROR);
+        return;
+    }
+
+    file.Write(content);
+    file.Close();
+
+    wxMessageBox("Icon saved successfully", "Success", wxOK | wxICON_INFORMATION);
 }

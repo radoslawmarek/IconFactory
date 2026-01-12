@@ -30,8 +30,10 @@ public:
 
     int GetIconSize() const { return m_iconSize; }
     const std::vector<std::vector<bool>>& GetIconPixels() const { return m_iconPixels; }
+    void SetIconPixels(const std::vector<std::vector<bool>>& pixels);
 
     void SetLineDrawingMode(bool enabled, bool isHorizontal);
+    void SetRectangleDrawingMode(bool enabled);
 
 private:
     void OnPaint(wxPaintEvent& event);
@@ -46,6 +48,7 @@ private:
     void DrawPreviewRuler(wxGraphicsContext* gc);
     void DrawIconPixels(wxGraphicsContext* gc);
     void DrawPreviewLine(wxGraphicsContext* gc);
+    void DrawPreviewRectangle(wxGraphicsContext* gc);
 
     int GetRulerAtPosition(const wxPoint& pos);
     int GetGridPositionFromMouse(const wxPoint& pos, RulerOrientation orientation);
@@ -77,4 +80,10 @@ private:
     int m_lineStartRow = 0;
     int m_currentCol = 0;
     int m_currentRow = 0;
+
+    // Rectangle drawing state
+    bool m_rectangleDrawingMode = false;
+    bool m_rectangleStartSet = false;
+    int m_rectangleStartCol = 0;
+    int m_rectangleStartRow = 0;
 };

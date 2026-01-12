@@ -33,6 +33,13 @@ void IconCanva::SetIconSize(int size)
     Refresh();
 }
 
+void IconCanva::SetIconPixels(const std::vector<std::vector<bool>>& pixels)
+{
+    m_iconPixels = pixels;
+    NotifyIconChanged();
+    Refresh();
+}
+
 void IconCanva::OnPaint(wxPaintEvent& event)
 {
     wxAutoBufferedPaintDC dc(this);
@@ -46,6 +53,7 @@ void IconCanva::OnPaint(wxPaintEvent& event)
         DrawPreviewRuler(gc);
         DrawIconPixels(gc);
         DrawPreviewLine(gc);
+        DrawPreviewRectangle(gc);
         DrawGrid(gc);
         delete gc;
     }
@@ -154,6 +162,14 @@ void IconCanva::OnMouseMove(wxMouseEvent& event)
             Refresh();
         }
 
+        // Update current position for rectangle drawing preview
+        if (m_rectangleDrawingMode && m_rectangleStartSet)
+        {
+            m_currentCol = col;
+            m_currentRow = row;
+            Refresh();
+        }
+
         // Send event to parent with cell position
         wxCommandEvent evt(EVT_CELL_HOVERED, GetId());
         evt.SetString(wxString::Format("(%d, %d)", col, row));
@@ -207,6 +223,50 @@ void IconCanva::OnLeftDown(wxMouseEvent& event)
     {
         int col = static_cast<int>((mousePos.x - m_gridX) / m_cellSize);
         int row = static_cast<int>((mousePos.y - m_gridY) / m_cellSize);
+
+        // Handle rectangle drawing mode
+        if (m_rectangleDrawingMode)
+        {
+            if (!m_rectangleStartSet)
+            {
+                // First click - set first corner
+                m_rectangleStartCol = col;
+                m_rectangleStartRow = row;
+                m_currentCol = col;
+                m_currentRow = row;
+                m_rectangleStartSet = true;
+                Refresh();
+            }
+            else
+            {
+                // Second click - draw the rectangle outline
+                int minCol = std::min(m_rectangleStartCol, col);
+                int maxCol = std::max(m_rectangleStartCol, col);
+                int minRow = std::min(m_rectangleStartRow, row);
+                int maxRow = std::max(m_rectangleStartRow, row);
+
+                // Draw top and bottom edges
+                for (int c = minCol; c <= maxCol; c++)
+                {
+                    m_iconPixels[minRow][c] = true;
+                    m_iconPixels[maxRow][c] = true;
+                }
+
+                // Draw left and right edges
+                for (int r = minRow; r <= maxRow; r++)
+                {
+                    m_iconPixels[r][minCol] = true;
+                    m_iconPixels[r][maxCol] = true;
+                }
+
+                // Exit rectangle drawing mode
+                m_rectangleDrawingMode = false;
+                m_rectangleStartSet = false;
+                NotifyIconChanged();
+                Refresh();
+            }
+            return;
+        }
 
         // Handle line drawing mode
         if (m_lineDrawingMode)
@@ -551,5 +611,51 @@ void IconCanva::DrawPreviewLine(wxGraphicsContext* gc)
             double y = m_gridY + r * m_cellSize;
             gc->DrawRectangle(x, y, m_cellSize, m_cellSize);
         }
+    }
+}
+
+void IconCanva::SetRectangleDrawingMode(bool enabled)
+{
+    m_rectangleDrawingMode = enabled;
+    m_rectangleStartSet = false;
+    m_rectangleStartCol = 0;
+    m_rectangleStartRow = 0;
+    m_currentCol = 0;
+    m_currentRow = 0;
+}
+
+void IconCanva::DrawPreviewRectangle(wxGraphicsContext* gc)
+{
+    if (!m_rectangleDrawingMode || !m_rectangleStartSet) return;
+
+    wxColour previewColor(128, 128, 128, 128); // Semi-transparent gray
+    gc->SetBrush(wxBrush(previewColor));
+    gc->SetPen(*wxTRANSPARENT_PEN);
+
+    int minCol = std::min(m_rectangleStartCol, m_currentCol);
+    int maxCol = std::max(m_rectangleStartCol, m_currentCol);
+    int minRow = std::min(m_rectangleStartRow, m_currentRow);
+    int maxRow = std::max(m_rectangleStartRow, m_currentRow);
+
+    // Draw top and bottom edges
+    for (int c = minCol; c <= maxCol; c++)
+    {
+        double x = m_gridX + c * m_cellSize;
+        double y = m_gridY + minRow * m_cellSize;
+        gc->DrawRectangle(x, y, m_cellSize, m_cellSize);
+
+        y = m_gridY + maxRow * m_cellSize;
+        gc->DrawRectangle(x, y, m_cellSize, m_cellSize);
+    }
+
+    // Draw left and right edges (excluding corners already drawn)
+    for (int r = minRow + 1; r < maxRow; r++)
+    {
+        double x = m_gridX + minCol * m_cellSize;
+        double y = m_gridY + r * m_cellSize;
+        gc->DrawRectangle(x, y, m_cellSize, m_cellSize);
+
+        x = m_gridX + maxCol * m_cellSize;
+        gc->DrawRectangle(x, y, m_cellSize, m_cellSize);
     }
 }

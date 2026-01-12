@@ -20,6 +20,9 @@ private:
     wxButton* m_btnVerticalRuler;
     wxButton* m_btnHorizontalLine;
     wxButton* m_btnVerticalLine;
+    wxButton* m_btnRectangle;
+    wxButton* m_btnOpen;
+    wxButton* m_btnSave;
 
     void SetLayout();
     void OnIconSizeChanged(wxCommandEvent& event);
@@ -30,4 +33,7 @@ private:
     void OnVerticalRulerClick(wxCommandEvent& event);
     void OnHorizontalLineClick(wxCommandEvent& event);
     void OnVerticalLineClick(wxCommandEvent& event);
+    void OnRectangleClick(wxCommandEvent& event);
+    void OnOpenClick(wxCommandEvent& event);
+    void OnSaveClick(wxCommandEvent& event);
 };

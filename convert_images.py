@@ -33,6 +33,9 @@ header_content += convert_png_to_cpp_array("assets/fold-horizontal.png", "fold_h
 header_content += convert_png_to_cpp_array("assets/fold-vertical.png", "fold_vertical")
 header_content += convert_png_to_cpp_array("assets/minus.png", "minus_horizontal")
 header_content += convert_png_to_cpp_array("assets/minus_rotated_90.png", "minus_vertical")
+header_content += convert_png_to_cpp_array("assets/rectangle.png", "rectangle")
+header_content += convert_png_to_cpp_array("assets/open.png", "open")
+header_content += convert_png_to_cpp_array("assets/save.png", "save")
 
 # Write to header file
 with open("src/Resources.h", "w") as f:
@@ -43,3 +46,6 @@ print("  - fold_horizontal.png")
 print("  - fold_vertical.png")
 print("  - minus.png (horizontal line)")
 print("  - minus_rotated_90.png (vertical line)")
+print("  - rectangle.png")
+print("  - open.png")
+print("  - save.png")
