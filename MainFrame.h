@@ -17,4 +17,5 @@ private:
     void SetLayout();
     void OnIconSizeChanged(wxCommandEvent& event);
     void OnCellHovered(wxCommandEvent& event);
+    void OnIconChanged(wxCommandEvent& event);
 };

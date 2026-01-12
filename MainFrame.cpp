@@ -13,6 +13,7 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Icon Factory")
     // Bind event handlers
     rb_iconSize->Bind(wxEVT_RADIOBOX, &MainFrame::OnIconSizeChanged, this);
     m_panel->Bind(EVT_CELL_HOVERED, &MainFrame::OnCellHovered, this);
+    m_panel->Bind(EVT_ICON_CHANGED, &MainFrame::OnIconChanged, this);
 
     SetLayout();
 
@@ -69,4 +70,10 @@ void MainFrame::OnCellHovered(wxCommandEvent& event)
     {
         SetStatusText("Cell: " + cellPos);
     }
+}
+
+void MainFrame::OnIconChanged(wxCommandEvent& event)
+{
+    // Icon pixels have changed - could be used for save/export functionality
+    // For now, just acknowledge the change
 }
