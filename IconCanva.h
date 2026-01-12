@@ -28,6 +28,9 @@ public:
 
     void SetIconSize(int size);
 
+    int GetIconSize() const { return m_iconSize; }
+    const std::vector<std::vector<bool>>& GetIconPixels() const { return m_iconPixels; }
+
 private:
     void OnPaint(wxPaintEvent& event);
     void OnMouseMove(wxMouseEvent& event);
