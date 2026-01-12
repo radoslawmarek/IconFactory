@@ -19,13 +19,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(wxWidgets)
 
-set(SRCS App.cpp
-        MainFrame.cpp
-        MainFrame.h
-        IconCanva.cpp
-        IconCanva.h
-        IconPreview.cpp
-        IconPreview.h)
+set(SRCS
+        src/App.cpp
+        src/MainFrame.cpp
+        src/MainFrame.h
+        src/IconCanva.cpp
+        src/IconCanva.h
+        src/IconPreview.cpp
+        src/IconPreview.h)
 
 # Add the manifest resource only for MinGW builds to avoid duplicate manifests with MSVC.
 if (MINGW)
@@ -34,3 +35,4 @@ endif()
 
 add_executable(main WIN32 ${SRCS})
 target_link_libraries(main PRIVATE wxcore wxnet)
+target_include_directories(main PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
