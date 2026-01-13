@@ -2,6 +2,7 @@
 
 #include <wx/wx.h>
 #include <vector>
+#include <queue>
 
 wxDECLARE_EVENT(EVT_CELL_HOVERED, wxCommandEvent);
 wxDECLARE_EVENT(EVT_ICON_CHANGED, wxCommandEvent);
@@ -34,6 +35,10 @@ public:
 
     void SetLineDrawingMode(bool enabled, bool isHorizontal);
     void SetRectangleDrawingMode(bool enabled);
+    void SetSelectionMode(bool enabled);
+    void SetMoveMode(bool enabled);
+    void SetFillMode(bool enabled);
+    void RotateClockwise();
 
 private:
     void OnPaint(wxPaintEvent& event);
@@ -49,6 +54,7 @@ private:
     void DrawIconPixels(wxGraphicsContext* gc);
     void DrawPreviewLine(wxGraphicsContext* gc);
     void DrawPreviewRectangle(wxGraphicsContext* gc);
+    void DrawSelection(wxGraphicsContext* gc);
 
     int GetRulerAtPosition(const wxPoint& pos);
     int GetGridPositionFromMouse(const wxPoint& pos, RulerOrientation orientation);
@@ -56,6 +62,7 @@ private:
 
     void TogglePixel(int col, int row);
     void NotifyIconChanged();
+    void FloodFill(int col, int row, bool targetValue);
 
     int m_iconSize = 32; // Default size
     int m_gridX = 0;
@@ -86,4 +93,23 @@ private:
     bool m_rectangleStartSet = false;
     int m_rectangleStartCol = 0;
     int m_rectangleStartRow = 0;
+
+    // Selection state
+    bool m_selectionMode = false;
+    bool m_selectionStartSet = false;
+    bool m_selectionComplete = false;
+    int m_selectionStartCol = 0;
+    int m_selectionStartRow = 0;
+    int m_selectionEndCol = 0;
+    int m_selectionEndRow = 0;
+    std::vector<std::vector<bool>> m_selectedRegion;
+
+    // Move state
+    bool m_moveMode = false;
+    bool m_movingSelection = false;
+    int m_moveStartCol = 0;
+    int m_moveStartRow = 0;
+
+    // Fill state
+    bool m_fillMode = false;
 };

@@ -54,6 +54,7 @@ void IconCanva::OnPaint(wxPaintEvent& event)
         DrawIconPixels(gc);
         DrawPreviewLine(gc);
         DrawPreviewRectangle(gc);
+        DrawSelection(gc);
         DrawGrid(gc);
         delete gc;
     }
@@ -170,6 +171,14 @@ void IconCanva::OnMouseMove(wxMouseEvent& event)
             Refresh();
         }
 
+        // Update current position for selection preview
+        if (m_selectionMode && m_selectionStartSet)
+        {
+            m_currentCol = col;
+            m_currentRow = row;
+            Refresh();
+        }
+
         // Send event to parent with cell position
         wxCommandEvent evt(EVT_CELL_HOVERED, GetId());
         evt.SetString(wxString::Format("(%d, %d)", col, row));
@@ -223,6 +232,138 @@ void IconCanva::OnLeftDown(wxMouseEvent& event)
     {
         int col = static_cast<int>((mousePos.x - m_gridX) / m_cellSize);
         int row = static_cast<int>((mousePos.y - m_gridY) / m_cellSize);
+
+        // Handle fill mode
+        if (m_fillMode)
+        {
+            bool targetValue = m_iconPixels[row][col];
+            FloodFill(col, row, targetValue);
+            m_fillMode = false;
+            NotifyIconChanged();
+            Refresh();
+            return;
+        }
+
+        // Handle move mode
+        if (m_moveMode)
+        {
+            if (!m_movingSelection)
+            {
+                // First click in move mode - record start position
+                m_moveStartCol = col;
+                m_moveStartRow = row;
+                m_movingSelection = true;
+            }
+            else
+            {
+                // Second click - move the selection
+                int minCol = std::min(m_selectionStartCol, m_selectionEndCol);
+                int maxCol = std::max(m_selectionStartCol, m_selectionEndCol);
+                int minRow = std::min(m_selectionStartRow, m_selectionEndRow);
+                int maxRow = std::max(m_selectionStartRow, m_selectionEndRow);
+
+                int deltaCol = col - m_moveStartCol;
+                int deltaRow = row - m_moveStartRow;
+
+                // Copy selected region
+                int width = maxCol - minCol + 1;
+                int height = maxRow - minRow + 1;
+                std::vector<std::vector<bool>> temp(height, std::vector<bool>(width));
+
+                for (int r = 0; r < height; r++)
+                {
+                    for (int c = 0; c < width; c++)
+                    {
+                        temp[r][c] = m_iconPixels[minRow + r][minCol + c];
+                    }
+                }
+
+                // Clear old region
+                for (int r = minRow; r <= maxRow; r++)
+                {
+                    for (int c = minCol; c <= maxCol; c++)
+                    {
+                        m_iconPixels[r][c] = false;
+                    }
+                }
+
+                // Paste to new location
+                int newMinCol = minCol + deltaCol;
+                int newMinRow = minRow + deltaRow;
+
+                for (int r = 0; r < height; r++)
+                {
+                    for (int c = 0; c < width; c++)
+                    {
+                        int targetRow = newMinRow + r;
+                        int targetCol = newMinCol + c;
+                        if (targetRow >= 0 && targetRow < m_iconSize &&
+                            targetCol >= 0 && targetCol < m_iconSize)
+                        {
+                            m_iconPixels[targetRow][targetCol] = temp[r][c];
+                        }
+                    }
+                }
+
+                // Update selection coordinates
+                m_selectionStartCol += deltaCol;
+                m_selectionStartRow += deltaRow;
+                m_selectionEndCol += deltaCol;
+                m_selectionEndRow += deltaRow;
+
+                // Exit move mode
+                m_moveMode = false;
+                m_movingSelection = false;
+                NotifyIconChanged();
+                Refresh();
+            }
+            return;
+        }
+
+        // Handle selection mode
+        if (m_selectionMode)
+        {
+            if (!m_selectionStartSet)
+            {
+                // First click - set first corner
+                m_selectionStartCol = col;
+                m_selectionStartRow = row;
+                m_currentCol = col;
+                m_currentRow = row;
+                m_selectionStartSet = true;
+                Refresh();
+            }
+            else
+            {
+                // Second click - complete the selection
+                m_selectionEndCol = col;
+                m_selectionEndRow = row;
+                m_selectionComplete = true;
+                m_selectionMode = false;
+                m_selectionStartSet = false;
+
+                // Store selected region data
+                int minCol = std::min(m_selectionStartCol, m_selectionEndCol);
+                int maxCol = std::max(m_selectionStartCol, m_selectionEndCol);
+                int minRow = std::min(m_selectionStartRow, m_selectionEndRow);
+                int maxRow = std::max(m_selectionStartRow, m_selectionEndRow);
+
+                int width = maxCol - minCol + 1;
+                int height = maxRow - minRow + 1;
+                m_selectedRegion.resize(height, std::vector<bool>(width));
+
+                for (int r = 0; r < height; r++)
+                {
+                    for (int c = 0; c < width; c++)
+                    {
+                        m_selectedRegion[r][c] = m_iconPixels[minRow + r][minCol + c];
+                    }
+                }
+
+                Refresh();
+            }
+            return;
+        }
 
         // Handle rectangle drawing mode
         if (m_rectangleDrawingMode)
@@ -382,7 +523,24 @@ void IconCanva::OnKeyDown(wxKeyEvent& event)
 {
     int keyCode = event.GetKeyCode();
 
-    if (keyCode == WXK_DELETE || keyCode == WXK_BACK)
+    if (keyCode == WXK_ESCAPE)
+    {
+        // Cancel ruler drawing preview
+        if (m_previewRulerActive)
+        {
+            m_previewRulerActive = false;
+            Refresh();
+        }
+
+        // Cancel selection mode
+        if (m_selectionMode && m_selectionStartSet)
+        {
+            m_selectionMode = false;
+            m_selectionStartSet = false;
+            Refresh();
+        }
+    }
+    else if (keyCode == WXK_DELETE || keyCode == WXK_BACK)
     {
         // Delete selected ruler
         for (auto it = m_rulers.begin(); it != m_rulers.end(); )
@@ -658,4 +816,156 @@ void IconCanva::DrawPreviewRectangle(wxGraphicsContext* gc)
         x = m_gridX + maxCol * m_cellSize;
         gc->DrawRectangle(x, y, m_cellSize, m_cellSize);
     }
+}
+
+// Selection mode implementation
+void IconCanva::SetSelectionMode(bool enabled)
+{
+    m_selectionMode = enabled;
+    m_selectionStartSet = false;
+    m_selectionComplete = false;
+    m_selectionStartCol = 0;
+    m_selectionStartRow = 0;
+    m_selectionEndCol = 0;
+    m_selectionEndRow = 0;
+    m_currentCol = 0;
+    m_currentRow = 0;
+}
+
+void IconCanva::DrawSelection(wxGraphicsContext* gc)
+{
+    if (!m_selectionMode && !m_selectionComplete) return;
+
+    int minCol, maxCol, minRow, maxRow;
+
+    if (m_selectionStartSet && !m_selectionComplete)
+    {
+        // Draw selection preview with longer dashes
+        minCol = std::min(m_selectionStartCol, m_currentCol);
+        maxCol = std::max(m_selectionStartCol, m_currentCol);
+        minRow = std::min(m_selectionStartRow, m_currentRow);
+        maxRow = std::max(m_selectionStartRow, m_currentRow);
+
+        // Draw dashed outline
+        wxColour previewColor(100, 100, 255, 180);
+        wxPen dashPen(previewColor, 2);
+        dashPen.SetStyle(wxPENSTYLE_SHORT_DASH);
+        gc->SetPen(dashPen);
+
+        double x1 = m_gridX + minCol * m_cellSize;
+        double y1 = m_gridY + minRow * m_cellSize;
+        double x2 = m_gridX + (maxCol + 1) * m_cellSize;
+        double y2 = m_gridY + (maxRow + 1) * m_cellSize;
+
+        gc->StrokeLine(x1, y1, x2, y1); // Top
+        gc->StrokeLine(x2, y1, x2, y2); // Right
+        gc->StrokeLine(x2, y2, x1, y2); // Bottom
+        gc->StrokeLine(x1, y2, x1, y1); // Left
+    }
+    else if (m_selectionComplete)
+    {
+        // Draw completed selection with shorter dashes
+        minCol = std::min(m_selectionStartCol, m_selectionEndCol);
+        maxCol = std::max(m_selectionStartCol, m_selectionEndCol);
+        minRow = std::min(m_selectionStartRow, m_selectionEndRow);
+        maxRow = std::max(m_selectionStartRow, m_selectionEndRow);
+
+        // Draw dashed outline with shorter dashes
+        wxColour selectionColor(50, 150, 255, 220);
+        wxPen dashPen(selectionColor, 2);
+        dashPen.SetStyle(wxPENSTYLE_DOT);
+        gc->SetPen(dashPen);
+
+        double x1 = m_gridX + minCol * m_cellSize;
+        double y1 = m_gridY + minRow * m_cellSize;
+        double x2 = m_gridX + (maxCol + 1) * m_cellSize;
+        double y2 = m_gridY + (maxRow + 1) * m_cellSize;
+
+        gc->StrokeLine(x1, y1, x2, y1); // Top
+        gc->StrokeLine(x2, y1, x2, y2); // Right
+        gc->StrokeLine(x2, y2, x1, y2); // Bottom
+        gc->StrokeLine(x1, y2, x1, y1); // Left
+    }
+}
+
+// Move mode implementation
+void IconCanva::SetMoveMode(bool enabled)
+{
+    if (!m_selectionComplete)
+    {
+        wxMessageBox("Please select a region first before moving", "No Selection", wxOK | wxICON_INFORMATION);
+        return;
+    }
+
+    m_moveMode = enabled;
+    m_movingSelection = false;
+    m_moveStartCol = 0;
+    m_moveStartRow = 0;
+}
+
+// Fill mode implementation
+void IconCanva::SetFillMode(bool enabled)
+{
+    m_fillMode = enabled;
+}
+
+void IconCanva::FloodFill(int col, int row, bool targetValue)
+{
+    if (row < 0 || row >= m_iconSize || col < 0 || col >= m_iconSize)
+        return;
+
+    if (m_iconPixels[row][col] != targetValue)
+        return;
+
+    std::queue<std::pair<int, int>> queue;
+    std::vector<std::vector<bool>> visited(m_iconSize, std::vector<bool>(m_iconSize, false));
+
+    queue.push({row, col});
+    visited[row][col] = true;
+
+    while (!queue.empty())
+    {
+        auto [r, c] = queue.front();
+        queue.pop();
+
+        m_iconPixels[r][c] = !targetValue;
+
+        // Check 4 neighbors
+        const int dx[] = {0, 1, 0, -1};
+        const int dy[] = {-1, 0, 1, 0};
+
+        for (int i = 0; i < 4; i++)
+        {
+            int newRow = r + dy[i];
+            int newCol = c + dx[i];
+
+            if (newRow >= 0 && newRow < m_iconSize && 
+                newCol >= 0 && newCol < m_iconSize &&
+                !visited[newRow][newCol] && 
+                m_iconPixels[newRow][newCol] == targetValue)
+            {
+                visited[newRow][newCol] = true;
+                queue.push({newRow, newCol});
+            }
+        }
+    }
+}
+
+// Rotate clockwise implementation
+void IconCanva::RotateClockwise()
+{
+    std::vector<std::vector<bool>> rotated(m_iconSize, std::vector<bool>(m_iconSize, false));
+
+    for (int row = 0; row < m_iconSize; row++)
+    {
+        for (int col = 0; col < m_iconSize; col++)
+        {
+            // Rotate 90 degrees clockwise: (row, col) -> (col, iconSize - 1 - row)
+            rotated[col][m_iconSize - 1 - row] = m_iconPixels[row][col];
+        }
+    }
+
+    m_iconPixels = rotated;
+    NotifyIconChanged();
+    Refresh();
 }

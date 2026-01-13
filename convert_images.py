@@ -36,6 +36,10 @@ header_content += convert_png_to_cpp_array("assets/minus_rotated_90.png", "minus
 header_content += convert_png_to_cpp_array("assets/rectangle.png", "rectangle")
 header_content += convert_png_to_cpp_array("assets/open.png", "open")
 header_content += convert_png_to_cpp_array("assets/save.png", "save")
+header_content += convert_png_to_cpp_array("assets/rotate-cw.png", "rotate_cw")
+header_content += convert_png_to_cpp_array("assets/select_rectangle.png", "select_rectangle")
+header_content += convert_png_to_cpp_array("assets/move.png", "move")
+header_content += convert_png_to_cpp_array("assets/fill.png", "fill")
 
 # Write to header file
 with open("src/Resources.h", "w") as f:
@@ -49,3 +53,7 @@ print("  - minus_rotated_90.png (vertical line)")
 print("  - rectangle.png")
 print("  - open.png")
 print("  - save.png")
+print("  - rotate_cw.png")
+print("  - select_rectangle.png")
+print("  - move.png")
+print("  - fill.png")

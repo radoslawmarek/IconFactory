@@ -19,6 +19,10 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Icon Factory")
     wxMemoryInputStream streamRect(rectangle_png, rectangle_png_size);
     wxMemoryInputStream streamOpen(open_png, open_png_size);
     wxMemoryInputStream streamSave(save_png, save_png_size);
+    wxMemoryInputStream streamRotateClockwise(rotate_cw_png, rotate_cw_png_size);
+    wxMemoryInputStream streamSelectRectangle(select_rectangle_png, select_rectangle_png_size);
+    wxMemoryInputStream streamMove(move_png, move_png_size);
+    wxMemoryInputStream streamFill(fill_png, fill_png_size);
 
     wxImage imgHR(streamHR, wxBITMAP_TYPE_PNG);
     wxImage imgVR(streamVR, wxBITMAP_TYPE_PNG);
@@ -27,6 +31,10 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Icon Factory")
     wxImage imgRect(streamRect, wxBITMAP_TYPE_PNG);
     wxImage imgOpen(streamOpen, wxBITMAP_TYPE_PNG);
     wxImage imgSave(streamSave, wxBITMAP_TYPE_PNG);
+    wxImage imgRotateClockwise(streamRotateClockwise, wxBITMAP_TYPE_PNG);
+    wxImage imgSelectRectangle(streamSelectRectangle, wxBITMAP_TYPE_PNG);
+    wxImage imgMove(streamMove, wxBITMAP_TYPE_PNG);
+    wxImage imgFill(streamFill, wxBITMAP_TYPE_PNG);
 
     wxBitmap bmpHR(imgHR);
     wxBitmap bmpVR(imgVR);
@@ -35,6 +43,10 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Icon Factory")
     wxBitmap bmpRect(imgRect);
     wxBitmap bmpOpen(imgOpen);
     wxBitmap bmpSave(imgSave);
+    wxBitmap bmpRotateClockwise(imgRotateClockwise);
+    wxBitmap bmpSelectRectangle(imgSelectRectangle);
+    wxBitmap bmpMove(imgMove);
+    wxBitmap bmpFill(imgFill);
 
     m_btnHorizontalRuler = new wxButton(m_panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
     m_btnVerticalRuler = new wxButton(m_panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
@@ -43,6 +55,10 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Icon Factory")
     m_btnRectangle = new wxButton(m_panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
     m_btnOpen = new wxButton(m_panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
     m_btnSave = new wxButton(m_panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    m_btnRotateClockwise = new wxButton(m_panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    m_btnSelect = new wxButton(m_panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    m_btnMove = new wxButton(m_panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
+    m_btnFill = new wxButton(m_panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT);
 
     m_btnHorizontalRuler->SetBitmap(bmpHR);
     m_btnVerticalRuler->SetBitmap(bmpVR);
@@ -51,6 +67,10 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Icon Factory")
     m_btnRectangle->SetBitmap(bmpRect);
     m_btnOpen->SetBitmap(bmpOpen);
     m_btnSave->SetBitmap(bmpSave);
+    m_btnRotateClockwise->SetBitmap(bmpRotateClockwise);
+    m_btnSelect->SetBitmap(bmpSelectRectangle);
+    m_btnMove->SetBitmap(bmpMove);
+    m_btnFill->SetBitmap(bmpFill);
 
     // Set tooltips
     m_btnHorizontalRuler->SetToolTip("Add Horizontal Ruler (H)");
@@ -60,6 +80,10 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Icon Factory")
     m_btnRectangle->SetToolTip("Draw Rectangle");
     m_btnOpen->SetToolTip("Open");
     m_btnSave->SetToolTip("Save");
+    m_btnRotateClockwise->SetToolTip("Rotate Clockwise");
+    m_btnSelect->SetToolTip("Select Rectangle");
+    m_btnMove->SetToolTip("Move");
+    m_btnFill->SetToolTip("Fill");
 
     // Set the default selection to Medium (32x32)
     rb_iconSize->SetSelection(1);
@@ -79,6 +103,10 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Icon Factory")
     m_btnRectangle->Bind(wxEVT_BUTTON, &MainFrame::OnRectangleClick, this);
     m_btnOpen->Bind(wxEVT_BUTTON, &MainFrame::OnOpenClick, this);
     m_btnSave->Bind(wxEVT_BUTTON, &MainFrame::OnSaveClick, this);
+    m_btnRotateClockwise->Bind(wxEVT_BUTTON, &MainFrame::OnRotateClockwiseClick, this);
+    m_btnSelect->Bind(wxEVT_BUTTON, &MainFrame::OnSelectRectangleClick, this);
+    m_btnMove->Bind(wxEVT_BUTTON, &MainFrame::OnMoveClick, this);
+    m_btnFill->Bind(wxEVT_BUTTON, &MainFrame::OnFillClick, this);
 
     SetLayout();
 
@@ -118,6 +146,14 @@ void MainFrame::SetLayout()
     toolbar_sizer->AddSpacer(this->FromDIP(8));
     toolbar_sizer->Add(m_btnRectangle, 0, wxALL, this->FromDIP(2));
     toolbox_sizer->Add(toolbar_sizer, 0, wxEXPAND | wxTOP, this->FromDIP(8));
+    toolbar_sizer->AddStretchSpacer(this->FromDIP(8));
+
+    auto* additional_operations_sizer = new wxBoxSizer(wxHORIZONTAL);
+    additional_operations_sizer->Add(m_btnRotateClockwise, 0, wxALL, this->FromDIP(2));
+    additional_operations_sizer->Add(m_btnSelect, 0, wxALL, this->FromDIP(2));
+    additional_operations_sizer->Add(m_btnMove, 0, wxALL, this->FromDIP(2));
+    additional_operations_sizer->Add(m_btnFill, 0, wxALL, this->FromDIP(2));
+    toolbox_sizer->Add(additional_operations_sizer, 0, wxEXPAND | wxTOP, this->FromDIP(8));
 
     // Stretch spacer to push preview to bottom
     toolbox_sizer->AddStretchSpacer(1);
@@ -152,8 +188,7 @@ void MainFrame::OnIconSizeChanged(wxCommandEvent& event)
 
 void MainFrame::OnCellHovered(wxCommandEvent& event)
 {
-    wxString cellPos = event.GetString();
-    if (cellPos.IsEmpty())
+    if (wxString cellPos = event.GetString(); cellPos.IsEmpty())
     {
         SetStatusText("");
     }
@@ -208,6 +243,30 @@ void MainFrame::OnVerticalLineClick(wxCommandEvent& event)
 void MainFrame::OnRectangleClick(wxCommandEvent& event)
 {
     m_iconCanva->SetRectangleDrawingMode(true);
+    m_iconCanva->SetFocus();
+}
+
+void MainFrame::OnSelectRectangleClick(wxCommandEvent& event)
+{
+    m_iconCanva->SetSelectionMode(true);
+    m_iconCanva->SetFocus();
+}
+
+void MainFrame::OnMoveClick(wxCommandEvent& event)
+{
+    m_iconCanva->SetMoveMode(true);
+    m_iconCanva->SetFocus();
+}
+
+void MainFrame::OnFillClick(wxCommandEvent& event)
+{
+    m_iconCanva->SetFillMode(true);
+    m_iconCanva->SetFocus();
+}
+
+void MainFrame::OnRotateClockwiseClick(wxCommandEvent& event)
+{
+    m_iconCanva->RotateClockwise();
     m_iconCanva->SetFocus();
 }
 

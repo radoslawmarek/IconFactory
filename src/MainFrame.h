@@ -23,6 +23,10 @@ private:
     wxButton* m_btnRectangle;
     wxButton* m_btnOpen;
     wxButton* m_btnSave;
+    wxButton* m_btnSelect;
+    wxButton* m_btnMove;
+    wxButton* m_btnFill;
+    wxButton* m_btnRotateClockwise;
 
     void SetLayout();
     void OnIconSizeChanged(wxCommandEvent& event);
@@ -36,4 +40,8 @@ private:
     void OnRectangleClick(wxCommandEvent& event);
     void OnOpenClick(wxCommandEvent& event);
     void OnSaveClick(wxCommandEvent& event);
+    void OnSelectRectangleClick(wxCommandEvent& event);
+    void OnMoveClick(wxCommandEvent& event);
+    void OnFillClick(wxCommandEvent& event);
+    void OnRotateClockwiseClick(wxCommandEvent& event);
 };
